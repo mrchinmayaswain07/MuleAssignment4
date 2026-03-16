@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns:configuration-properties="http://www.mulesoft.org/schema/mule/configuration-properties"
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="
+      http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+      http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+      http://www.mulesoft.org/schema/mule/configuration-properties http://www.mulesoft.org/schema/mule/configuration-properties/current/mule-configuration-properties.xsd">
+
+   
+    <configuration-properties file="properties/${env}.yaml"/>
+
+  
+    <http:listener-config name="process-httpListener" basePath="/api">
+        <http:listener-connection host="${http.host}" port="${http.port}"/>
+    </http:listener-config>
+
+   
+    <http:request-config name="external-api-config">
+        <http:request-connection host="${external.host}" port="${external.port}"/>
+    </http:request-config>
+
+   
+    <http:request-config name="salesforce-system-api-config">
+        <http:request-connection host="${salesforce.host}" port="${salesforce.port}"/>
+    </http:request-config>
+
+</mule>

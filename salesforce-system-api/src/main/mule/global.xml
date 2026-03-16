@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+      xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:salesforce-composite="http://www.mulesoft.org/schema/mule/salesforce-composite"
+      xmlns:http="http://www.mulesoft.org/schema/mule/http"
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:configuration-properties="http://www.mulesoft.org/schema/mule/configuration-properties" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+      http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+      http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+      http://www.mulesoft.org/schema/mule/configuration-properties http://www.mulesoft.org/schema/mule/configuration-properties/current/mule-configuration-properties.xsd
+      http://www.mulesoft.org/schema/mule/salesforce-composite http://www.mulesoft.org/schema/mule/salesforce-composite/current/mule-salesforce-composite.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd">
+
+   
+    <configuration-properties file="properties/${env}.yaml"/>
+
+    
+    <http:listener-config name="salesforce-system-http-listener" basePath="/api">
+        <http:listener-connection host="${http.host}" port="${http.port}" readTimeout="300000"/>
+    </http:listener-config>
+
+    
+    <salesforce-composite:composite-config name="Salesforce_Composite_Config">
+        <salesforce-composite:oauth-user-pass-connection
+                consumerKey="${secure::salesforce.consumerKey}"
+                consumerSecret="${secure::salesforce.consumerSecret}"
+                username="${salesforce.username}"
+                password="${secure::salesforce.password}"
+                securityToken="${secure::salesforce.securityToken}"
+                responseTimeout="300000"/>
+    </salesforce-composite:composite-config>
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="6eef4f75-8265-4d29-8b93-77be1632d6f5" file="properties/${env}.yaml" key="${secure.key}" />
+
+
+</mule>

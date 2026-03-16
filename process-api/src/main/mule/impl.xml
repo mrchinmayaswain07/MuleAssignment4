@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="
+	http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+	http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+	http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+
+	<flow name="process-syncCompanies-impl">
+
+		<logger level="INFO" message="Process API started"/>
+
+		<!-- Fetch Users -->
+		<http:request
+			config-ref="external-api-config"
+			method="GET"
+			path="/api/users"/>
+
+		<set-variable variableName="users"
+			value="#[payload]"/>
+
+		<!-- Fetch Posts -->
+		<http:request
+			config-ref="external-api-config"
+			method="GET"
+			path="/api/posts"/>
+
+		<set-variable variableName="posts"
+			value="#[payload]"/>
+
+		<!-- Transform to Company + Employees -->
+		<ee:transform doc:name="Build Company Structure">
+			<ee:message>
+				<ee:set-payload><![CDATA[
+%dw 2.0
+output application/json
+
+var users = vars.users
+var posts = vars.posts
+
+---
+users map (u) -> {
+  companyId: u.id,
+  companyName: u.name,
+  phone: u.phone,
+  website: u.website,
+  employees: posts filter ($.userId == u.id) map (p) -> {
+      id: p.id,
+      title: p.title,
+      description: p.body
+  }
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+
+		<!-- Build Salesforce Composite Requests -->
+		<ee:transform doc:name="Build Composite Requests">
+			<ee:message>
+				<ee:set-payload><![CDATA[
+%dw 2.0
+output application/java
+
+var companies = payload
+
+---
+companies flatMap (c) ->
+
+[
+{
+	method: "PATCH",
+	url: "/services/data/v60.0/sobjects/Account/External_Id__c/" ++ (c.companyId as String),
+	referenceId: "refAccount" ++ (c.companyId as String),
+	body: {
+		Name: c.companyName,
+		Phone: c.phone,
+		Website: c.website
+	}
+}
+]
+
+++
+(
+c.employees map (e) -> {
+	method: "PATCH",
+	url: "/services/data/v60.0/sobjects/Contact/External_Id__c/" ++ (e.id as String),
+	referenceId: "refContact" ++ (e.id as String),
+	body: {
+		LastName: e.title,
+		Description: e.description,
+		AccountId: "@{refAccount" ++ (c.companyId as String) ++ ".id}"
+	}
+}
+)
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+
+		<!-- Batch Processing -->
+		<logger level="INFO" message="total size : #[sizeOf(payload)]"/>
+
+		<foreach collection="#[payload]" batchSize="22">
+
+			<logger level="INFO"
+				message="Processing batch #[sizeOf(payload)]"/>
+
+			<ee:transform doc:name="Composite Payload">
+				<ee:message>
+					<ee:set-payload><![CDATA[
+%dw 2.0
+output application/json
+---
+{
+	allOrNone: false,
+	compositeRequest: payload
+}
+]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+
+			<http:request
+				config-ref="salesforce-system-api-config"
+				method="POST"
+				path="/api/composite"
+				responseTimeout="300000"/>
+
+		</foreach>
+
+		<!-- Success Response -->
+		<ee:transform doc:name="Success Response">
+			<ee:message>
+				<ee:set-payload><![CDATA[
+%dw 2.0
+output application/json
+---
+{
+	success: "sucessfully done"
+}
+]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+
+		<logger level="INFO"
+			message="Salesforce Sync Completed"/>
+		<error-handler ref="global-error-handler" />
+
+	
+</flow>
+
+</mule>

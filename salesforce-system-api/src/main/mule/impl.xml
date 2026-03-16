@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+      xmlns:salesforce-composite="http://www.mulesoft.org/schema/mule/salesforce-composite"
+      xmlns="http://www.mulesoft.org/schema/mule/core"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+      http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+      http://www.mulesoft.org/schema/mule/salesforce-composite http://www.mulesoft.org/schema/mule/salesforce-composite/current/mule-salesforce-composite.xsd">
+
+    <flow name="salesforce-composite-impl">
+
+        <logger level="INFO"
+                message="Executing Salesforce Composite Request"/>
+		<try doc:name="Try" doc:id="f0dc1e62-84d3-4ed6-980a-4477462d717e" >
+			<salesforce-composite:execute-composite-request config-ref="Salesforce_Composite_Config" doc:name="Execute Composite Request" />
+			<error-handler ref="global-error-handler" />
+		</try>
+
+    
+</flow>
+
+</mule>
